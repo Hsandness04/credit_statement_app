@@ -12,7 +12,7 @@ def main():
     transactions_dict = pdf_page_reader(page)
 
     usbank_window = Window()
-    display_transactions(usbank_window.frm, transactions_dict)
+    display_transactions(usbank_window, transactions_dict)
 
 
     ###
@@ -22,7 +22,7 @@ def main():
     ###
     entries = check_entries(usbank_window.frm)
 
-    def submit_subcategory(event):
+    def submit_subcategories(event):
         entry_index = 0
         transactions_key_list = list(transactions_dict.keys())
         submissions = 0
@@ -34,9 +34,11 @@ def main():
             entry_index += 1
         
         messagebox.showinfo("Successful Entries", f"All {submissions} entries have been submitted!")
+        usbank_window.redraw_transactions(transactions_dict)
+        
     
     for entry in entries:
-        entry.bind("<Return>", submit_subcategory)
+        entry.bind("<Return>", submit_subcategories)
 
 
     
