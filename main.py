@@ -7,9 +7,49 @@ import copy
 
 
 def main():
+
+    def get_file_path():
+
+        global file_path 
+        widgets = input_window.frm.winfo_children()
+        for widget in widgets:
+            if widget.grid_info()["row"] == 1 and widget.grid_info()["column"] == 1:
+                file_path = widget.get().strip()
+
+        file_path = re.sub(r'"', '', file_path) # Remove double quotations if the user doesn't.
+
+        # Error handling of file
+        if file_path == "":
+            raise ValueError("No file was selected.")
+        if file_path[-3:] != "pdf":
+            raise ValueError("PDF file was not selected, please select a valid PDF file.")
+        input_window.window.destroy()
+
+    # Get PDF file from the user.
+        # Labels
+    input_window = Window() # Temporary input window
+    ttk.Label(input_window.frm, text="File Path").grid(column=1, row=0)
+    ttk.Label(input_window.frm, text="Start Page").grid(column=2, row=0)
+    ttk.Label(input_window.frm, text="End Page").grid(column=3, row=0)
+        # Entries and submit button
+    filepath_entry = ttk.Entry(input_window.frm, width=80).grid(column=1, row=1, padx=10, pady=10)
+        # Need to be global so we can access them in the main loop.
+    global page_start; page_start = ttk.Entry(input_window.frm, width=5).grid(column=2, row=1, padx=10, pady=10)
+    global page_end; page_end = ttk.Entry(input_window.frm, width=5).grid(column=3, row=1, padx=10, pady=10)
+    ttk.Button(input_window.frm, text="Submit", command=get_file_path).grid(column=1, row=2)
+
+    # Wait for input before continuing
+    input_window.start_window()
+
+
     # Ingest the PDF file.
-    reader = PdfReader("2025-01-07 Statement - USB Credit Card 2917.pdf",strict=True)
-    page = reader.pages[3].extract_text()
+    reader = PdfReader(file_path,strict=True)
+        # Get start and end pages
+    start = page_start.get().strip() - 1
+    end = page_end.get().strip() - 1
+        # Read the page numbers provided by the user and create
+        # a dictionary and a deep copy of the dictionary.
+    page = reader.pages[start:end].extract_text()
     transactions_dict = pdf_page_reader(page)
     transactions_dict_copy = copy.deepcopy(transactions_dict)
 
@@ -26,9 +66,6 @@ def main():
     def bind_entries(entries):
         for entry in entries:
             entry.bind("<Return>", submit_subcategories)
-
-    # entry 1 (filled), entry 2, entry 3
-    # entry 2, entry 3 (filled)
 
     def submit_subcategories(event):
         entry_index = 0
@@ -52,12 +89,10 @@ def main():
         bind_entries(check_entries(usbank_window.frm))
 
 
+
     # Initial binding of entries for subcategory field.
     bind_entries(check_entries(usbank_window.frm))
     usbank_window.start_window()
-    print(transactions_dict)
         
-
-
 
 main()
