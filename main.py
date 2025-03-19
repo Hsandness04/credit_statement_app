@@ -11,13 +11,18 @@ def main():
     def get_file_path():
 
         global file_path 
+        global page_start
+        global page_end
         widgets = input_window.frm.winfo_children()
         for widget in widgets:
             if widget.grid_info()["row"] == 1 and widget.grid_info()["column"] == 1:
                 file_path = widget.get().strip()
+            if widget.grid_info()["row"] == 1 and widget.grid_info()["column"] == 2:
+                page_start = widget.get().strip()
+            if widget.grid_info()["row"] == 1 and widget.grid_info()["column"] == 3:
+                page_end = widget.get().strip()
 
         file_path = re.sub(r'"', '', file_path) # Remove double quotations if the user doesn't.
-
         # Error handling of file
         if file_path == "":
             raise ValueError("No file was selected.")
@@ -25,32 +30,36 @@ def main():
             raise ValueError("PDF file was not selected, please select a valid PDF file.")
         input_window.window.destroy()
 
-    # Get PDF file from the user.
+    # Get PDF file and pages from the user.
         # Labels
     input_window = Window() # Temporary input window
     ttk.Label(input_window.frm, text="File Path").grid(column=1, row=0)
     ttk.Label(input_window.frm, text="Start Page").grid(column=2, row=0)
     ttk.Label(input_window.frm, text="End Page").grid(column=3, row=0)
         # Entries and submit button
-    filepath_entry = ttk.Entry(input_window.frm, width=80).grid(column=1, row=1, padx=10, pady=10)
-        # Need to be global so we can access them in the main loop.
-    global page_start; page_start = ttk.Entry(input_window.frm, width=5).grid(column=2, row=1, padx=10, pady=10)
-    global page_end; page_end = ttk.Entry(input_window.frm, width=5).grid(column=3, row=1, padx=10, pady=10)
+    ttk.Entry(input_window.frm, width=80).grid(column=1, row=1, padx=10, pady=10)
+    ttk.Entry(input_window.frm, width=5).grid(column=2, row=1, padx=10, pady=10)
+    ttk.Entry(input_window.frm, width=5).grid(column=3, row=1, padx=10, pady=10)
     ttk.Button(input_window.frm, text="Submit", command=get_file_path).grid(column=1, row=2)
 
-    # Wait for input before continuing
+    # Wait for user input before continuing with main window
     input_window.start_window()
 
 
     # Ingest the PDF file.
     reader = PdfReader(file_path,strict=True)
         # Get start and end pages
-    start = page_start.get().strip() - 1
-    end = page_end.get().strip() - 1
+    start = int(page_start) - 1
+    end = int(page_end) - 1
         # Read the page numbers provided by the user and create
         # a dictionary and a deep copy of the dictionary.
-    page = reader.pages[start:end].extract_text()
+    page = "" 
+    for pages in reader.pages[start:end]: 
+        page += pages.extract_text()
     transactions_dict = pdf_page_reader(page)
+        # Deepcopy is used to decrement the amount of
+        # remaining entries while maintaining the original
+        # transaction dictionary for upload purposes.
     transactions_dict_copy = copy.deepcopy(transactions_dict)
 
     usbank_window = Window()
@@ -93,6 +102,6 @@ def main():
     # Initial binding of entries for subcategory field.
     bind_entries(check_entries(usbank_window.frm))
     usbank_window.start_window()
-        
+
 
 main()
