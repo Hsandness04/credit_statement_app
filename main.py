@@ -27,7 +27,7 @@ def main():
         if file_path == "":
             raise ValueError("No file was selected.")
         if file_path[-3:] != "pdf":
-            raise ValueError("PDF file was not selected, please select a valid PDF file.")
+            raise ValueError("PDF file was NOT selected, please select a valid PDF file.")
         input_window.window.destroy()
 
     # Get PDF file and pages from the user.
@@ -57,14 +57,13 @@ def main():
     for pages in reader.pages[start:end]: 
         page += pages.extract_text()
     transactions_dict = pdf_page_reader(page)
-        # Deepcopy is used to decrement the amount of
+        # Deepcopy is used to reduce the number of
         # remaining entries while maintaining the original
         # transaction dictionary for upload purposes.
     transactions_dict_copy = copy.deepcopy(transactions_dict)
 
     usbank_window = Window()
-    display_transactions(usbank_window, transactions_dict)
-
+    entries = display_transactions(usbank_window, transactions_dict)
 
     ###
     # Iterate of each entry widget for each transaction and bind to it so that 
@@ -72,36 +71,38 @@ def main():
     # field for all entries
     ###
 
-    def bind_entries(entries):
-        for entry in entries:
-            entry.bind("<Return>", submit_subcategories)
+    def bind_entries(entry_widgets):
+        for entry in entry_widgets:
+            entry_widgets[entry]["category"].bind("<Return>", submit_entries)
+            entry_widgets[entry]["subcategory"].bind("<Return>", submit_entries)
 
-    def submit_subcategories(event):
-        entry_index = 0
-        transactions_key_list = list(transactions_dict_copy.keys())
+    def submit_entries(event):
         submissions = 0 # Keep track of the number of entries submitted.
-
-        for entry in check_entries(usbank_window.frm):
-            transaction_ref_id = transactions_key_list[entry_index]
-            if entry.get().strip() != "":
-                transactions_dict[transaction_ref_id]["details"]["subcategory"] = entry.get()
-                del transactions_dict_copy[transaction_ref_id]
+        nonlocal entries
+        for entry in entries:
+            if entries[entry]["category"].get().strip() != "" or entries[entry]["subcategory"].get().strip() != "":
                 submissions += 1 # Track the amout of entries being submitted.
-            entry_index += 1
+            if entries[entry]["category"].get().strip() != "":
+                transactions_dict[entry]["details"]["category"] = entries[entry]["category"].get()
+            if entries[entry]["subcategory"].get().strip() != "":
+                transactions_dict[entry]["details"]["subcategory"] = entries[entry]["subcategory"].get()
+            del transactions_dict_copy[entry]
 
-        messagebox.showinfo("Successful Entries", f"All {submissions} entries have been submitted!")
+        messagebox.showinfo("Successful Entries", f"{submissions} entries have been submitted!")
 
         # Populate new transactions within the frame that have not 
         # had their subcategory field filled out. Then bind the
-        # submit_categories function to the new entries.
-        usbank_window.redraw_transactions(transactions_dict)
-        bind_entries(check_entries(usbank_window.frm))
+        # submit_entries function to the new entries.
+        entries = usbank_window.redraw_transactions(transactions_dict_copy)
+        bind_entries(entries)
 
-
-
-    # Initial binding of entries for subcategory field.
-    bind_entries(check_entries(usbank_window.frm))
+    # Initial binding of entries for category & subcategory field.
+    #bind_entries(entries)
+    bind_entries(entries)
     usbank_window.start_window()
+
+    print(transactions_dict)
 
 
 main()
+
