@@ -1,9 +1,9 @@
 from pypdf import PdfReader
 from pdf import *
+from transactions import Transactions
 from window import Window
 from transactions import *
 from tkinter import messagebox
-import copy
 
 
 def main():
@@ -52,56 +52,50 @@ def main():
     start = int(page_start) - 1
     end = int(page_end) - 1
         # Read the page numbers provided by the user and create
-        # a dictionary and a deep copy of the dictionary.
+        # a dictionary.
     page = "" 
     for pages in reader.pages[start:end]: 
         page += pages.extract_text()
     transactions_dict = pdf_page_reader(page)
-        # Deepcopy is used to reduce the number of
-        # remaining entries while maintaining the original
-        # transaction dictionary for upload purposes.
-    transactions_dict_copy = copy.deepcopy(transactions_dict)
+
 
     usbank_window = Window()
-    entries = display_transactions(usbank_window, transactions_dict)
+    transactions = Transactions(usbank_window, transactions_dict)
+    transactions.display_transactions()
 
     ###
     # Iterate of each entry widget for each transaction and bind to it so that 
-    # on each click of the enter button, we submit the subcategory from the text
-    # field for all entries
+    # on each click of the enter button, we submit the category & subcategory from the text
+    # field for all transactions.
     ###
-
-    def bind_entries(entry_widgets):
-        for entry in entry_widgets:
-            entry_widgets[entry]["category"].bind("<Return>", submit_entries)
-            entry_widgets[entry]["subcategory"].bind("<Return>", submit_entries)
+    def bind_entries(entries):
+        for entry in transactions.entries:
+            transactions.entries[entry]["category"].bind("<Return>", submit_entries)
+            transactions.entries[entry]["subcategory"].bind("<Return>", submit_entries)
 
     def submit_entries(event):
         submissions = 0 # Keep track of the number of entries submitted.
-        nonlocal entries
-        for entry in entries:
-            if entries[entry]["category"].get().strip() != "" or entries[entry]["subcategory"].get().strip() != "":
+        for entry in transactions.entries:
+            if transactions.entries[entry]["category"].get().strip() != "" or transactions.entries[entry]["subcategory"].get().strip() != "":
                 submissions += 1 # Track the amout of entries being submitted.
-            if entries[entry]["category"].get().strip() != "":
-                transactions_dict[entry]["details"]["category"] = entries[entry]["category"].get()
-            if entries[entry]["subcategory"].get().strip() != "":
-                transactions_dict[entry]["details"]["subcategory"] = entries[entry]["subcategory"].get()
-            del transactions_dict_copy[entry]
+            if transactions.entries[entry]["category"].get().strip() != "":
+                transactions.transactions[entry]["details"]["category"] = transactions.entries[entry]["category"].get()
+            if transactions.entries[entry]["subcategory"].get().strip() != "":
+                transactions.transactions[entry]["details"]["subcategory"] = transactions.entries[entry]["subcategory"].get()
 
         messagebox.showinfo("Successful Entries", f"{submissions} entries have been submitted!")
 
         # Populate new transactions within the frame that have not 
-        # had their subcategory field filled out. Then bind the
+        # had their category or subcategory field filled out. Then bind the
         # submit_entries function to the new entries.
-        entries = usbank_window.redraw_transactions(transactions_dict_copy)
-        bind_entries(entries)
+        transactions.redraw_transactions()
+        bind_entries(transactions.entries)
 
     # Initial binding of entries for category & subcategory field.
-    #bind_entries(entries)
-    bind_entries(entries)
+    bind_entries(transactions.entries)
     usbank_window.start_window()
 
-    print(transactions_dict)
+    print(transactions.transactions)
 
 
 main()
