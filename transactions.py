@@ -1,4 +1,5 @@
 from tkinter import ttk
+import tkinter as tk
 
 class Transactions:
 
@@ -7,10 +8,15 @@ class Transactions:
         self.transactions: dict = transactions
         self.entries = {}
 
+
+    def check_key_length(self) -> int:
+        return len(self.transactions.keys())
+
+
     def display_transactions(self) -> None:
         # Adjust location of quit button depending on how many transactions
         # remain in the dictionary.
-        if len(self.transactions.keys()) < 11:
+        if self.check_key_length() < 11:
             row = len(self.transactions.keys()) + 1
             ttk.Button(self.window.frm, text="Quit", command=self.window.window.destroy).grid(column=1, row=row)
         else :
@@ -36,7 +42,8 @@ class Transactions:
             ttk.Label(self.window.frm, text=self.transactions[tran]["details"]["amount"]).grid(column=2, row=row)
 
             self.entries[tran] = {"category": "",
-                            "subcategory": ""}
+                            "subcategory": "",
+                            "checkbox": {"widget": "", "checked": ""}}
             # Add transaction category
             category_entry = ttk.Entry(self.window.frm)
             category_entry.grid(column=3, row=row, padx=10, pady=10)
@@ -45,6 +52,12 @@ class Transactions:
             subcategory_entry = ttk.Entry(self.window.frm)
             subcategory_entry.grid(column=4, row=row, padx=10, pady=10)
             self.entries[tran]["subcategory"] = subcategory_entry
+            # Add checkbox to remove unwanted transactions
+            checkbox_value = tk.IntVar(value=0)
+            checkbox = tk.Checkbutton(self.window.frm, variable=checkbox_value)
+            checkbox.grid(column=5, row=row)
+            self.entries[tran]["checkbox"]["widget"] = checkbox
+            self.entries[tran]["checkbox"]["checked"] = checkbox_value
 
             row += 1
                 
@@ -56,6 +69,7 @@ class Transactions:
         ttk.Label(self.window.frm, text="Amount").grid(column=2, row=0)
         ttk.Label(self.window.frm, text="Category").grid(column=3, row=0)
         ttk.Label(self.window.frm, text="SubCategory").grid(column=4, row=0)
+        ttk.Label(self.window.frm, text="Remove Transaction").grid(column=5, row=0)
 
 
     def redraw_transactions(self) -> None:
