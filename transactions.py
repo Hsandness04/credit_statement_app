@@ -11,6 +11,19 @@ class Transactions:
 
     def check_key_length(self) -> int:
         return len(self.transactions.keys())
+    
+
+    def check_cat_subcategory_fields(self, transaction) -> int: # 0 both fields aren't set
+        tran_category = self.transactions[transaction]["details"]["category"]
+        tran_subcategory = self.transactions[transaction]["details"]["subcategory"]
+        set_fields = 0
+        if tran_category.strip() != "":
+            set_fields = 2
+        if tran_subcategory.strip() != "" and set_fields != 2:
+            set_fields = 1
+        if tran_subcategory.strip() != "" and set_fields == 2:
+            set_fields = 3
+        return set_fields
 
 
     def display_transactions(self) -> None:
@@ -25,16 +38,15 @@ class Transactions:
         # Set column headings
         self.display_transaction_headings()
 
-        # For each new 10 transactions, initialize an empty
-        # dictionary.
+        # For each new 10 transactions, initialize an empty dictionary.
         row = 1
         self.entries = {}
         for tran in self.transactions:
             if row >= 11 or row > len(self.transactions.keys()):
                 break
-            tran_category = self.transactions[tran]["details"]["category"]
-            tran_subcategory = self.transactions[tran]["details"]["subcategory"]
-            if tran_category.strip() != "" or tran_subcategory.strip() != "":
+            # Only returning transactions that have no cat and subcat field filled out.
+            # Any value above zero indicates the category or subcategory fields are filled out.
+            if self.check_cat_subcategory_fields(tran) > 0:
                 continue
 
             ttk.Label(self.window.frm, text=tran).grid(column=0, row=row)
