@@ -12,7 +12,6 @@ class Transactions:
     def check_key_length(self) -> int:
         return len(self.transactions.keys())
     
-
     def check_cat_subcategory_fields(self, transaction) -> int: # 0 both fields aren't set
         tran_category = self.transactions[transaction]["details"]["category"]
         tran_subcategory = self.transactions[transaction]["details"]["subcategory"]
@@ -25,15 +24,18 @@ class Transactions:
             set_fields = 3
         return set_fields
 
-
     def display_transactions(self) -> None:
         # Adjust location of quit button depending on how many transactions
         # remain in the dictionary.
         if self.check_key_length() < 11:
             row = len(self.transactions.keys()) + 1
             ttk.Button(self.window.frm, text="Quit", command=self.window.window.destroy).grid(column=1, row=row)
+            ttk.Button(self.window.frm, text="Submit", command=self.window.window.destroy).grid(column=3, row=row)
+            ttk.Button(self.window.frm, text="Delete Transactions", command=self.window.window.destroy).grid(column=4, row=row)
         else :
             ttk.Button(self.window.frm, text="Quit", command=self.window.window.destroy).grid(column=1, row=11)
+            ttk.Button(self.window.frm, text="Submit", command=self.window.window.destroy).grid(column=3, row=row)
+            ttk.Button(self.window.frm, text="Delete Transactions", command=self.window.window.destroy).grid(column=4, row=row)
 
         # Set column headings
         self.display_transaction_headings()
