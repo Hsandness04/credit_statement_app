@@ -4,6 +4,7 @@ from transactions import Transactions
 from window import Window
 from transactions import *
 from tkinter import messagebox
+from sqlite import SQLiteConnector
 
 
 def main():
@@ -56,11 +57,11 @@ def main():
     page = "" 
     for pages in reader.pages[start:end]: 
         page += pages.extract_text()
-    transactions_dict = pdf_page_reader(page)
+    init_transactions_dict = pdf_page_reader(page)
 
 
     usbank_window = Window()
-    transactions = Transactions(usbank_window, transactions_dict)
+    transactions = Transactions(usbank_window, init_transactions_dict)
     transactions.display_transactions()
 
     ###
@@ -76,6 +77,8 @@ def main():
     def submit_entries(event):
         submissions = 0 # Keep track of the number of entries submitted.
         for entry in transactions.entries:
+            if transactions.entries[entry]["checkbox"]["checked"].get() == 1:
+                del transactions.transactions[entry]
             if transactions.entries[entry]["category"].get().strip() != "" or transactions.entries[entry]["subcategory"].get().strip() != "":
                 submissions += 1 # Track the amout of entries being submitted.
             if transactions.entries[entry]["category"].get().strip() != "":
@@ -91,11 +94,25 @@ def main():
         transactions.redraw_transactions()
         bind_entries(transactions.entries)
 
+        sql_upload(transactions)
+
     # Initial binding of entries for category & subcategory field.
     bind_entries(transactions.entries)
+
+    sqlite = SQLiteConnector('bank_transactions.db')
+    def sql_upload(transactions):
+        sqlite.create_table('transactions')
+        sqlite.insert_transactions(transactions.transactions)
+        sqlite.submit_changes()
+
+
+    # Start mainloop
     usbank_window.start_window()
 
-    print(transactions.transactions)
+
+    transactions = sqlite.select_all()
+    sqlite.close_connection()
+    print(transactions)
 
 
 main()
