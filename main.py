@@ -3,17 +3,19 @@ from pdf import *
 from transactions import Transactions
 from window import Window
 from transactions import *
-from tkinter import messagebox
 from sqlite import SQLiteConnector
+import os
+
 
 
 def main():
 
-    def get_file_path():
 
+    def get_file_path() -> None:
         global file_path 
         global page_start
         global page_end
+        global existing_transactions_dict
         widgets = input_window.frm.winfo_children()
         for widget in widgets:
             if widget.grid_info()["row"] == 1 and widget.grid_info()["column"] == 1:
@@ -25,11 +27,32 @@ def main():
 
         file_path = re.sub(r'"', '', file_path) # Remove double quotations if the user doesn't.
         # Error handling of file
-        if file_path == "":
+        if file_path == "" or file_path is None:
             raise ValueError("No file was selected.")
         if file_path[-3:] != "pdf":
             raise ValueError("PDF file was NOT selected, please select a valid PDF file.")
+        existing_transactions_dict = None
         input_window.window.destroy()
+
+
+    def update_existing_transactions() -> None:
+        global existing_transactions_dict
+        global file_path
+        existing_transactions_dict = {}
+
+        db_path = os.path.abspath('C:/Users/hsand/projects/finance_calculator/database/bank_transactions.db')
+        sqlite = SQLiteConnector(db_path)
+        transactions = sqlite.select_all()
+        for transaction in transactions:
+            transaction_key = transaction[1]
+            existing_transactions_dict[transaction_key] = {"details": 
+                                    {"amount": transaction[2], 
+                                     "description": transaction[3], 
+                                     "category": transaction[4], 
+                                     "subcategory": transaction[5]}}
+        file_path = None
+        input_window.window.destroy()
+
 
     # Get PDF file and pages from the user.
         # Labels
@@ -42,72 +65,45 @@ def main():
     ttk.Entry(input_window.frm, width=5).grid(column=2, row=1, padx=10, pady=10)
     ttk.Entry(input_window.frm, width=5).grid(column=3, row=1, padx=10, pady=10)
     ttk.Button(input_window.frm, text="Submit", command=get_file_path).grid(column=1, row=2)
+    ttk.Button(input_window.frm, text="Update Existing Transactions", command=update_existing_transactions).grid(column=2, row=2)
 
     # Wait for user input before continuing with main window
     input_window.start_window()
 
-
-    # Ingest the PDF file.
-    reader = PdfReader(file_path,strict=True)
-        # Get start and end pages
-    start = int(page_start) - 1
-    end = int(page_end) - 1
-        # Read the page numbers provided by the user and create
-        # a dictionary.
-    page = "" 
-    for pages in reader.pages[start:end]: 
-        page += pages.extract_text()
-    init_transactions_dict = pdf_page_reader(page)
-
-
     usbank_window = Window()
-    transactions = Transactions(usbank_window, init_transactions_dict)
-    transactions.display_transactions()
+    if file_path is not None:
+        # Ingest the PDF file.
+        reader = PdfReader(file_path,strict=True)
+            # Get start and end pages
+        start = int(page_start) - 1
+        end = int(page_end) - 1
+            # Read the page numbers provided by the user and create
+            # a dictionary.
+        page = "" 
+        for pages in reader.pages[start:end]: 
+            page += pages.extract_text()
 
-    ###
-    # Iterate of each entry widget for each transaction and bind to it so that 
-    # on each click of the enter button, we submit the category & subcategory from the text
-    # field for all transactions.
-    ###
-    def bind_entries(entries):
-        for entry in transactions.entries:
-            transactions.entries[entry]["category"].bind("<Return>", submit_entries)
-            transactions.entries[entry]["subcategory"].bind("<Return>", submit_entries)
+        transactions_dict = pdf_page_reader(page)
+        transactions = Transactions(usbank_window, transactions_dict)
+        transactions.display_transactions()
+        transactions.bind_entries()
 
-    def submit_entries(event):
-        submissions = 0 # Keep track of the number of entries submitted.
-        for entry in transactions.entries:
-            if transactions.entries[entry]["checkbox"]["checked"].get() == 1:
-                del transactions.transactions[entry]
-            if transactions.entries[entry]["category"].get().strip() != "" or transactions.entries[entry]["subcategory"].get().strip() != "":
-                submissions += 1 # Track the amout of entries being submitted.
-            if transactions.entries[entry]["category"].get().strip() != "":
-                transactions.transactions[entry]["details"]["category"] = transactions.entries[entry]["category"].get()
-            if transactions.entries[entry]["subcategory"].get().strip() != "":
-                transactions.transactions[entry]["details"]["subcategory"] = transactions.entries[entry]["subcategory"].get()
-
-        messagebox.showinfo("Successful Entries", f"{submissions} entries have been submitted!")
-
-        # Populate new transactions within the frame that have not 
-        # had their category or subcategory field filled out. Then bind the
-        # submit_entries function to the new entries.
-        transactions.redraw_transactions()
-        bind_entries(transactions.entries)
-
-        sql_upload(transactions)
-
-    # Initial binding of entries for category & subcategory field.
-    bind_entries(transactions.entries)
-
-    sqlite = SQLiteConnector('bank_transactions.db')
-    def sql_upload(transactions):
-        sqlite.create_table('transactions')
-        sqlite.insert_transactions(transactions.transactions)
-        sqlite.submit_changes()
+    if existing_transactions_dict is not None:
+        transactions = Transactions(usbank_window, existing_transactions_dict)
+        transactions.display_transactions(ignore_existing_checks=True)
+        transactions.bind_entries()
 
 
     # Start mainloop
     usbank_window.start_window()
+
+
+    sqlite = SQLiteConnector('C:/Users/hsand/projects/finance_calculator/database/bank_transactions.db')
+    def sql_upload(transactions):
+        sqlite.create_table('transactions')
+        sqlite.insert_transactions(transactions.transactions)
+        sqlite.submit_changes()
+    sql_upload(transactions)
 
 
     transactions = sqlite.select_all()
