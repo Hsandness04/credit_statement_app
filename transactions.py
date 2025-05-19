@@ -37,7 +37,7 @@ class Transactions:
             set_fields = 3
         return set_fields
 
-    def display_transactions(self) -> None:
+    def display_transactions(self, ignore_existing_checks=False) -> None:
 
         self.create_buttons()
 
@@ -50,10 +50,13 @@ class Transactions:
         for tran in self.transactions:
             if row >= 11 or row > len(self.transactions.keys()):
                 break
-            # Only returning transactions that have no cat and subcat field filled out.
-            # Any value above zero indicates the category or subcategory fields are filled out.
-            if self.check_cat_subcategory_fields(tran) > 0:
-                continue
+            # If argument is true, it means we want to display existing transactions. If it's false, then
+            # we're checking if category and subcategory fields already exist.
+            if ignore_existing_checks == False:
+                # Only returning transactions that have no cat and subcat field filled out.
+                # Any value above zero indicates the category or subcategory fields are filled out.
+                if self.check_cat_subcategory_fields(tran) > 0:
+                    continue
 
             ttk.Label(self.window.frm, text=tran).grid(column=0, row=row)
             #ttk.Label(self.window.frm, text=self.transactions[tran]["details"]["description"]).grid(column=1, row=row)
