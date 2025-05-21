@@ -45,9 +45,9 @@ def main():
         transactions = sqlite.select_all()
         for transaction in transactions:
             transaction_key = transaction[1]
-            existing_transactions_dict[transaction_key] = {"details": 
-                                    {"amount": transaction[2], 
-                                     "description": transaction[3], 
+            existing_transactions_dict[transaction_key] = {"details":
+                                    {"amount": transaction[3], 
+                                     "description": transaction[2], 
                                      "category": transaction[4], 
                                      "subcategory": transaction[5]}}
         file_path = None
@@ -90,7 +90,7 @@ def main():
 
     if existing_transactions_dict is not None:
         transactions = Transactions(usbank_window, existing_transactions_dict)
-        transactions.display_transactions(ignore_existing_checks=True)
+        transactions.display_transactions(display_existing=True)
         transactions.bind_entries()
 
 
@@ -105,10 +105,10 @@ def main():
         sqlite.submit_changes()
     sql_upload(transactions)
 
-
-    transactions = sqlite.select_all()
+    test = sqlite.select_all()
     sqlite.close_connection()
-    print(transactions)
+    print(test)
+
 
 
 main()
