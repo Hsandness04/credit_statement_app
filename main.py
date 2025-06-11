@@ -40,7 +40,7 @@ def main():
         global file_path
         existing_transactions_dict = {}
 
-        db_path = os.path.abspath('C:/Users/hsand/projects/finance_calculator/database/bank_transactions.db')
+        db_path = os.path.abspath('../database/bank_transactions.db')
         sqlite = SQLiteConnector(db_path)
         transactions = sqlite.select_all()
         for transaction in transactions:
@@ -98,7 +98,7 @@ def main():
     usbank_window.start_window()
 
 
-    sqlite = SQLiteConnector('C:/Users/hsand/projects/finance_calculator/database/bank_transactions.db')
+    sqlite = SQLiteConnector('../database/bank_transactions.db')
     def sql_upload(transactions):
         sqlite.create_table('transactions')
         sqlite.insert_transactions(transactions.transactions)
