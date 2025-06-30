@@ -25,9 +25,8 @@ class Window(tk.Tk, BaseWindow):
         window.grab_set()
         return window
     
-
-
+    
+    
 class TopLevelWindow(tk.Toplevel, BaseWindow):
     def __init__(self, parent):
         super().__init__(parent)
-

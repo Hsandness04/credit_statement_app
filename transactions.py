@@ -36,7 +36,8 @@ class Transactions:
     def create_buttons(self) -> None:      
         # Adjust location of quit button depending on how many transactions
         # remain in the dictionary.
-        if self.window.widgetName != "toplevel":
+
+        if self.window.master == None:
             if self.check_key_length() < 11:
                 row = len(self.transactions.keys()) + 1
                 ttk.Button(self.window.frm, text="Cancel", command=self.window.destroy).grid(column=0, row=row)
@@ -48,7 +49,7 @@ class Transactions:
                 ttk.Button(self.window.frm, text="Submit & Done", command=self.submit_entries_complete).grid(column=2, row=11)
                 ttk.Button(self.window.frm, text="Submit", command=self.submit_entries).grid(column=3, row=11)
                 ttk.Button(self.window.frm, text="Delete Transactions", command=self.delete_entries).grid(column=6, row=11)
-        elif self.window.widgetName == "toplevel":
+        else:
             ttk.Button(self.window.frm, text="Submit & Done", command=self.submit_entries_complete).grid(column=2, row=3)
 
 
@@ -98,7 +99,7 @@ class Transactions:
             subcategory_entry.grid(column=5, row=row, padx=10, pady=10)
             self.entries[transaction]["subcategory"] = subcategory_entry
             # Add checkbox to remove unwanted transactions
-            if self.window.widgetName == "toplevel":
+            if self.window.master == None:
                 checkbox_value = tk.IntVar(value=0)
                 checkbox = tk.Checkbutton(self.window_frame, variable=checkbox_value)
                 checkbox.grid(column=6, row=row)
@@ -144,7 +145,7 @@ class Transactions:
         ttk.Label(self.window.frm, text="Amount").grid(column=3, row=0)
         ttk.Label(self.window.frm, text="Category").grid(column=4, row=0)
         ttk.Label(self.window.frm, text="SubCategory").grid(column=5, row=0)
-        if self.window.widgetName == "toplevel":
+        if self.window.master == None:
             ttk.Label(self.window.frm, text="Remove Transaction").grid(column=6, row=0)
 
 
@@ -170,19 +171,26 @@ class Transactions:
     def update_split_entry_amount(self, amount, original_entry_key, split_entry_key):
         if amount != "":
             try:
+                amount = re.sub(r"\$", "", amount)
+                amount = round(float(amount),2)
+            except TypeError:
+                print("Amount could not be cast to rounded float.")
+            try:
+                original_amount = self.transactions[original_entry_key]["details"]["amount"]
+                original_amount = re.sub(r"\$", "", original_amount)
+                original_amount = round(float(original_amount),2)
+            except TypeError:
+                print("Original amount could not be cast to rounded float.")
                 amount = re.sub(r"[$]", "", amount)
                 amount = round(float(amount),2)
             except TypeError:
                 print("Amount could not be cast to rounded float.")
-
-            original_amount = self.transactions[original_entry_key]["details"]["amount"]
             try: # Check if split entry already exists.
                 original_split_amount = self.transactions[split_entry_key]["details"]["amount"]
                 self.transactions[split_entry_key]["details"]["amount"] = amount
                 try:
                     original_amount = float(original_amount) + float(original_split_amount)
                 except TypeError:
-                    original_amount = float(re.sub(r"[$]", "",original_amount)) + float(original_split_amount)
             except KeyError:
                 posted_date = self.transactions[original_entry_key]["details"]["posted_date"]
                 self.transactions[split_entry_key] = {"details": 
@@ -248,7 +256,7 @@ class Transactions:
     # Event argument must be set to None. bind method automatically passes event object
     # while method as a callback in the Button object does not pass any argument.
     def submit_entries_complete(self, event=None):
-        if self.window.widgetName == "toplevel":
+        if self.window.master != None:
             self.submit_entries(redraw_transactions=False, split_transaction=True)
             original_transactions = self.parent_instance
             self.window.destroy()

@@ -10,6 +10,9 @@ def pdf_page_reader(page: str) -> dict:
 
 
 def get_transaction_amt(transaction, patterns) -> None:
+    # Remove dollar sign from transaction amount.
+    re.sub(r"[$]", "", transaction)
+
     # 100's search
     if re.search(patterns[0], transaction):
         return re.search(patterns[0], transaction).group()
@@ -80,4 +83,3 @@ def read_us_bank_transaction(page) -> dict:
                                      "subcategory": ""}}
 
     return transactions
-
