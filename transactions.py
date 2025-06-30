@@ -199,7 +199,7 @@ class Transactions:
                                     "description": "", 
                                     "category": "", 
                                     "subcategory": ""}}
-            self.transactions[original_entry_key]["details"]["amount"] = abs(original_amount - amount)
+            self.transactions[original_entry_key]["details"]["amount"] = round(float(abs(original_amount - amount)),2)
         else:
             print("Amount is a blank value.")
 
