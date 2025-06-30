@@ -11,7 +11,7 @@ def pdf_page_reader(page: str) -> dict:
 
 def get_transaction_amt(transaction, patterns) -> None:
     # Remove dollar sign from transaction amount.
-    re.sub(r"[$]", "", transaction)
+    re.sub(r"\$", "", transaction)
 
     # 100's search
     if re.search(patterns[0], transaction):
