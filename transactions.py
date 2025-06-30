@@ -36,6 +36,7 @@ class Transactions:
     def create_buttons(self) -> None:      
         # Adjust location of quit button depending on how many transactions
         # remain in the dictionary.
+
         if self.window.master == None:
             if self.check_key_length() < 11:
                 row = len(self.transactions.keys()) + 1
@@ -180,13 +181,16 @@ class Transactions:
                 original_amount = round(float(original_amount),2)
             except TypeError:
                 print("Original amount could not be cast to rounded float.")
+                amount = re.sub(r"[$]", "", amount)
+                amount = round(float(amount),2)
+            except TypeError:
+                print("Amount could not be cast to rounded float.")
             try: # Check if split entry already exists.
                 original_split_amount = self.transactions[split_entry_key]["details"]["amount"]
                 self.transactions[split_entry_key]["details"]["amount"] = amount
                 try:
                     original_amount = float(original_amount) + float(original_split_amount)
                 except TypeError:
-                    original_amount = float(re.sub(r"\$", "",original_amount)) + float(original_split_amount)
             except KeyError:
                 posted_date = self.transactions[original_entry_key]["details"]["posted_date"]
                 self.transactions[split_entry_key] = {"details": 
