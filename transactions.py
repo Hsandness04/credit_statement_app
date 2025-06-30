@@ -9,8 +9,10 @@ class Transactions:
 
     transactions = {} # Share same transactions dictionary across all instances.
 
-    def __init__(self, window):
+    def __init__(self, window:Window, parent_instance=None):
+        self.parent_instance = parent_instance
         self.window = window
+        self.window_frame = self.window.create_frame()
         self.entries = {}
 
 
@@ -19,6 +21,8 @@ class Transactions:
         self.set_flags()
 
 
+    # Initialize all transactions for an event to be active which in my mind means
+    # the user hasn't made an update to them or requested that they be deleted.
     def set_flags(self):
         for transaction in self.transactions:
             self.transactions[transaction]["updated"] = False
@@ -29,22 +33,22 @@ class Transactions:
         return len(self.transactions.keys())
     
 
-    def create_buttons(self, toplevelwindow=False) -> None:      
+    def create_buttons(self) -> None:      
         # Adjust location of quit button depending on how many transactions
         # remain in the dictionary.
-        if toplevelwindow == False:
+        if self.window.master == None:
             if self.check_key_length() < 11:
                 row = len(self.transactions.keys()) + 1
-                ttk.Button(self.window.frm, text="Cancel", command=self.window.window.destroy).grid(column=0, row=row)
+                ttk.Button(self.window.frm, text="Cancel", command=self.window.destroy).grid(column=0, row=row)
                 ttk.Button(self.window.frm, text="Submit & Done", command=self.submit_entries_complete).grid(column=2, row=row)
                 ttk.Button(self.window.frm, text="Submit", command=self.submit_entries).grid(column=3, row=row)
                 ttk.Button(self.window.frm, text="Delete Transactions", command=self.delete_entries).grid(column=5, row=row)
             else :
-                ttk.Button(self.window.frm, text="Cancel", command=self.window.window.destroy).grid(column=0, row=11)
+                ttk.Button(self.window.frm, text="Cancel", command=self.window.destroy).grid(column=0, row=11)
                 ttk.Button(self.window.frm, text="Submit & Done", command=self.submit_entries_complete).grid(column=2, row=11)
                 ttk.Button(self.window.frm, text="Submit", command=self.submit_entries).grid(column=3, row=11)
                 ttk.Button(self.window.frm, text="Delete Transactions", command=self.delete_entries).grid(column=6, row=11)
-        elif toplevelwindow == True:
+        else:
             ttk.Button(self.window.frm, text="Submit & Done", command=self.submit_entries_complete).grid(column=2, row=3)
 
 
@@ -67,12 +71,13 @@ class Transactions:
                 continue
 
             # Initialize static columns. Ones that the user will not make edits to.
-            ttk.Label(self.window.frm, text=tran).grid(column=0, row=row)
-            ttk.Label(self.window.frm, text=self.transactions[tran]["details"]["posted_date"]).grid(column=1, row=row)
-            ttk.Label(self.window.frm, text=self.transactions[tran]["details"]["amount"]).grid(column=3, row=row)
+            ttk.Label(self.window_frame, text=tran).grid(column=0, row=row)
+            ttk.Label(self.window_frame, text=self.transactions[tran]["details"]["posted_date"]).grid(column=1, row=row)
+            ttk.Label(self.window_frame, text=self.transactions[tran]["details"]["amount"]).grid(column=3, row=row)
 
             self.create_entry_widgets_for_transaction(tran, row)
             row += 1
+
 
     def create_entry_widgets_for_transaction(self, transaction, row):
             self.entries[transaction] = {"description": "",
@@ -80,30 +85,31 @@ class Transactions:
                             "subcategory": "",
                             "checkbox": {"widget": "", "checked": ""}}
             # Add description and allow user to edit
-            description_entry = ttk.Entry(self.window.frm, width=60)
+            description_entry = ttk.Entry(self.window_frame, width=60)
             description_entry.grid(column=2, row=row, padx=10, pady=10)
             description_entry.insert(0, self.transactions[transaction]["details"]["description"])
             self.entries[transaction]["description"] = description_entry
             # Add transaction category
-            category_entry = ttk.Entry(self.window.frm)
+            category_entry = ttk.Entry(self.window_frame)
             category_entry.grid(column=4, row=row, padx=10, pady=10)
             self.entries[transaction]["category"] = category_entry
             # Add transaction subcategory
-            subcategory_entry = ttk.Entry(self.window.frm)
+            subcategory_entry = ttk.Entry(self.window_frame)
             subcategory_entry.grid(column=5, row=row, padx=10, pady=10)
             self.entries[transaction]["subcategory"] = subcategory_entry
             # Add checkbox to remove unwanted transactions
-            checkbox_value = tk.IntVar(value=0)
-            checkbox = tk.Checkbutton(self.window.frm, variable=checkbox_value)
-            checkbox.grid(column=6, row=row)
-            self.entries[transaction]["checkbox"]["widget"] = checkbox
-            self.entries[transaction]["checkbox"]["checked"] = checkbox_value
+            if self.window.master == None:
+                checkbox_value = tk.IntVar(value=0)
+                checkbox = tk.Checkbutton(self.window_frame, variable=checkbox_value)
+                checkbox.grid(column=6, row=row)
+                self.entries[transaction]["checkbox"]["widget"] = checkbox
+                self.entries[transaction]["checkbox"]["checked"] = checkbox_value
             # Add button to split transactions
-            ttk.Button(self.window.frm, text="Split Transaction", width=15, 
+            ttk.Button(self.window_frame, text="Split Transaction", width=15, 
                        command=lambda: self.display_split_transaction(transaction)).grid(column=7, row=row, padx=0, pady=0)
     
 
-    def update_split_amount(self, window_frame, transaction):
+    def display_split_amount(self, window_frame: tk.Frame, transaction):
         self.entries[transaction]["amount"] = "" # Initialize amount key for entry
 
         # Add amount and allow user to edit
@@ -117,23 +123,19 @@ class Transactions:
     # need a few random digits on the end of it to ensure it's a unique value. Other fields should be entry widgets
     # for user to break down transaction into different categories.
     def display_split_transaction(self, transaction):
-        split_window = tk.Toplevel(self.window.window)
-        split_window.frm = ttk.Frame(split_window)
-        split_window.frm.grid()
-        split_transaction = Transactions(split_window)
+        split_window = self.window.create_top_level_window()
+        split_transaction = Transactions(window=split_window, parent_instance=self)
 
-        split_transaction.create_buttons(toplevelwindow=True)
+        split_transaction.create_buttons()
         split_transaction.display_transaction_headings()
         # Initialize static columns. Ones that the user will not make edits to.
-        ttk.Label(split_window.frm, text=transaction).grid(column=0, row=1)
-        ttk.Label(split_window.frm, text=self.transactions[transaction]["details"]["posted_date"]).grid(column=1, row=1)
+        ttk.Label(split_transaction.window_frame, text=transaction).grid(column=0, row=1)
+        ttk.Label(split_transaction.window_frame, text=self.transactions[transaction]["details"]["posted_date"]).grid(column=1, row=1)
 
         split_transaction.create_entry_widgets_for_transaction(transaction, row=1)
-        split_transaction.update_split_amount(split_transaction.window.frm, transaction)
+        split_transaction.display_split_amount(split_transaction.window_frame, transaction)
 
-        split_window.grab_set()
 
-        
     def display_transaction_headings(self) -> None:
         # Set column headings
         ttk.Label(self.window.frm, text="Transaction Ref ID").grid(column=0, row=0)
@@ -142,7 +144,8 @@ class Transactions:
         ttk.Label(self.window.frm, text="Amount").grid(column=3, row=0)
         ttk.Label(self.window.frm, text="Category").grid(column=4, row=0)
         ttk.Label(self.window.frm, text="SubCategory").grid(column=5, row=0)
-        ttk.Label(self.window.frm, text="Remove Transaction").grid(column=6, row=0)
+        if self.window.master == None:
+            ttk.Label(self.window.frm, text="Remove Transaction").grid(column=6, row=0)
 
 
     def redraw_transactions(self) -> None:
@@ -164,6 +167,49 @@ class Transactions:
             self.entries[entry]["checkbox"]["widget"].bind("<Return>", self.delete_entries)
     
 
+    def update_split_entry_amount(self, amount, original_entry_key, split_entry_key):
+        if amount != "":
+            try:
+                amount = re.sub(r"\$", "", amount)
+                amount = round(float(amount),2)
+            except TypeError:
+                print("Amount could not be cast to rounded float.")
+            try:
+                original_amount = self.transactions[original_entry_key]["details"]["amount"]
+                original_amount = re.sub(r"\$", "", original_amount)
+                original_amount = round(float(original_amount),2)
+            except TypeError:
+                print("Original amount could not be cast to rounded float.")
+            try: # Check if split entry already exists.
+                original_split_amount = self.transactions[split_entry_key]["details"]["amount"]
+                self.transactions[split_entry_key]["details"]["amount"] = amount
+                try:
+                    original_amount = float(original_amount) + float(original_split_amount)
+                except TypeError:
+                    original_amount = float(re.sub(r"\$", "",original_amount)) + float(original_split_amount)
+            except KeyError:
+                posted_date = self.transactions[original_entry_key]["details"]["posted_date"]
+                self.transactions[split_entry_key] = {"details": 
+                                    {"posted_date": posted_date,
+                                    "amount": amount, 
+                                    "description": "", 
+                                    "category": "", 
+                                    "subcategory": ""}}
+            self.transactions[original_entry_key]["details"]["amount"] = abs(original_amount - amount)
+        else:
+            print("Amount is a blank value.")
+
+
+    def update_transaction_fields(self, **kwargs):
+        if "entry_key" in kwargs:
+            entry_key = kwargs["entry_key"]
+            for key, value in kwargs.items():
+                if key == entry_key:
+                    pass
+                else:
+                    self.transactions[entry_key]["details"][key] = value
+
+
     # Event argument must be set to None. bind method automatically passes event object
     # while method as a callback in the Button object does not pass any argument.
     def submit_entries(self, redraw_transactions=True, split_transaction=False, event=None):
@@ -171,60 +217,29 @@ class Transactions:
         for entry in self.entries:
             category = self.entries[entry]["category"].get().strip()
             subcategory = self.entries[entry]["subcategory"].get().strip()
-            amount = self.entries[entry]["amount"].get().strip()
+            description = self.entries[entry]["description"].get()
 
-            if category != "" or subcategory != "" or amount != "":
-                    submissions += 1 # Track the amout of entries being submitted.
             if split_transaction == False:
+                if category != "" or subcategory != "":
+                    submissions += 1 # Track the amout of entries being submitted.
                 # Delete entries on submit if users select the delete checkbox.
                 if self.entries[entry]["checkbox"]["checked"].get() == 1:
                     self.delete_entry(entry)
-                if category != "":
-                    self.transactions[entry]["details"]["category"] = category
-                if subcategory != "":
-                    self.transactions[entry]["details"]["subcategory"] = subcategory
-                if amount != "":
-                    self.transactions[entry]["details"]["amount"] = amount
-                # No need for 'if' check for description, user either makes edits or leaves it as is.
-                # Upload the description after the category and subcategory have been reviewed by the user.
-                self.transactions[entry]["details"]["description"] = self.entries[entry]["description"].get()
-                self.transactions[entry]["updated"] = True
+                self.update_transaction_fields(entry_key=entry, category=category, subcategory=subcategory,
+                                               description=description, 
+                                               updated=True)
             elif split_transaction == True:
+                amount = self.entries[entry]["amount"].get().strip()
+                if category != "" or subcategory != "" or amount != "":
+                    submissions += 1 # Track the amout of entries being submitted.
+                
                 split_entry = entry + "001"
-                try: # Update existing split transaction.
-                    pass
-                except KeyError: # Create new split transaction if it doesn't exist.
-                    posted_date = self.transactions[entry]["details"]["posted_date"]
-                    self.transactions[split_entry] = {"details": 
-                                        {"posted_date": posted_date,
-                                        "amount": "", 
-                                        "description": "", 
-                                        "category": "", 
-                                        "subcategory": ""}}
-                    if amount != "":
-                        # Update existing transaction amount and new split transaction amount
-                        try:
-                            original_amount = re.sub(r"[$]", "", self.transactions[entry]["details"]["amount"])
-                            original_amount = float(original_amount)
-                        except TypeError:
-                            original_amount = self.transactions[entry]["details"]["amount"]
-                        try:
-                            amount = re.sub(r"[$]", "", amount)
-                            amount = float(amount)
-                        except TypeError:
-                            pass
-                        self.transactions[entry]["details"]["amount"] = abs(original_amount - amount)
-                        self.transactions[split_entry]["details"]["amount"] = amount 
-                    if category != "":
-                        self.transactions[split_entry]["details"]["category"] = category
-                    if subcategory != "":
-                        self.transactions[split_entry]["details"]["subcategory"] = subcategory
+                self.update_split_entry_amount(amount, entry, split_entry)
+                self.update_transaction_fields(entry_key=split_entry, category=category, subcategory=subcategory,
+                                                   description=description, 
+                                                   updated=True,
+                                                   deleted=False)
 
-                    # No need for 'if' check for description, user either makes edits or leaves it as is.
-                    # Upload the description after the category and subcategory have been reviewed by the user.
-                    self.transactions[split_entry]["details"]["description"] = self.entries[entry]["description"].get()
-                    self.transactions[split_entry]["updated"] = True
-                    self.transactions[split_entry]["deleted"] = False
         messagebox.showinfo("Successful Entries", f"{submissions} entries have been submitted!")
 
         # Populate new transactions within the frame that have not 
@@ -237,12 +252,14 @@ class Transactions:
     # Event argument must be set to None. bind method automatically passes event object
     # while method as a callback in the Button object does not pass any argument.
     def submit_entries_complete(self, event=None):
-        if self.window.widgetName == "toplevel":
+        if self.window.master != None:
             self.submit_entries(redraw_transactions=False, split_transaction=True)
+            original_transactions = self.parent_instance
             self.window.destroy()
+            original_transactions.redraw_transactions()
         else:
             self.submit_entries(redraw_transactions=False)
-            self.window.window.destroy()
+            self.window.destroy()
 
 
     def delete_entry(self, entry) -> None:
