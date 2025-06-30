@@ -28,7 +28,7 @@ def main():
         global existing_transactions_dict
         existing_transactions_dict = None
 
-        widgets = input_window.frm.winfo_children()
+        widgets = input_window_frame.winfo_children()
         for widget in widgets:
             if widget.widgetName == "ttk::entry":
                 widget_value = get_widget_entry(widget)
@@ -45,7 +45,7 @@ def main():
             raise ValueError("No file was selected.")
         if file_path[-3:] != "pdf":
             raise ValueError("PDF file was NOT selected, please select a valid PDF file.")
-        input_window.window.destroy()
+        input_window.destroy()
 
 
     def update_existing_transactions() -> None:
@@ -66,7 +66,7 @@ def main():
                                      "category": transaction[5], 
                                      "subcategory": transaction[6]}}
             
-        input_window.window.destroy()
+        input_window.destroy()
 
 
     def output_to_excel() -> None:
@@ -76,71 +76,103 @@ def main():
         sqlite.output_data_to_excel(excel_output)
         os.startfile(excel_output)
  
-        input_window.window.destroy()
+        input_window.destroy()
 
-    
+###
+
+### Start of Input window
+
+###
+
     # Get PDF file and pages from the user.
     # Labels
     input_window = Window() # Temporary input window
-    ttk.Label(input_window.frm, text="File Path").grid(column=1, row=0)
-    ttk.Label(input_window.frm, text="Start Page").grid(column=2, row=0)
-    ttk.Label(input_window.frm, text="End Page").grid(column=3, row=0)
+    input_window_frame = input_window.create_frame()
+    ttk.Label(input_window_frame, text="File Path").grid(column=1, row=0)
+    ttk.Label(input_window_frame, text="Start Page").grid(column=2, row=0)
+    ttk.Label(input_window_frame, text="End Page").grid(column=3, row=0)
     # Entries and submit button
-    ttk.Entry(input_window.frm, width=80).grid(column=1, row=1, padx=10, pady=10)
-    ttk.Entry(input_window.frm, width=5).grid(column=2, row=1, padx=10, pady=10)
-    ttk.Entry(input_window.frm, width=5).grid(column=3, row=1, padx=10, pady=10)
-    ttk.Button(input_window.frm, text="Update Existing Transactions", command=update_existing_transactions).grid(column=1, row=2)
-    ttk.Button(input_window.frm, text="Output to Excel", command=output_to_excel).grid(column=2, row=2)
-    ttk.Button(input_window.frm, text="Submit", command=get_file_path).grid(column=4, row=1)
+    ttk.Entry(input_window_frame, width=80).grid(column=1, row=1, padx=10, pady=10)
+    ttk.Entry(input_window_frame, width=5).grid(column=2, row=1, padx=10, pady=10)
+    ttk.Entry(input_window_frame, width=5).grid(column=3, row=1, padx=10, pady=10)
+    ttk.Button(input_window_frame, text="Update Existing Transactions", command=update_existing_transactions).grid(column=1, row=2)
+    ttk.Button(input_window_frame, text="Output to Excel", command=output_to_excel).grid(column=2, row=2)
+    ttk.Button(input_window_frame, text="Submit", command=get_file_path).grid(column=4, row=1)
 
     # Wait for user input before continuing with main window
     input_window.start_window()
+###
+
+### End of Input window
+
+###
 
 
+
+
+
+###
+
+### Start of Main window
+
+###
     usbank_window = Window()
-    if file_path is not None:
-        # Ingest the PDF file.
-        reader = PdfReader(file_path,strict=True)
-        # Get start and end pages
-        page = ""
-        if page_start is not None and page_end is not None:
-            start = int(page_start) - 1
-            end = int(page_end) - 1
-            # Read the page numbers provided by the user and create
-            # a dictionary.
-            for pages in reader.pages[start:end]: 
-                page += pages.extract_text()
+    try:
+        if file_path is not None:
+            # Ingest the PDF file.
+            reader = PdfReader(file_path,strict=True)
+            # Get start and end pages
+            page = ""
+            if page_start is not None and page_end is not None:
+                start = int(page_start) - 1
+                end = int(page_end) - 1
+                # Read the page numbers provided by the user and create
+                # a dictionary.
+                for pages in reader.pages[start:end]: 
+                    page += pages.extract_text()
+            else:
+                for pages in reader.pages[:]: 
+                    page += pages.extract_text()
+                transactions_dict = pdf_page_reader(page)
+                transactions = Transactions(usbank_window)
+                transactions.set_transactions_dict(transactions_dict)
+                transactions.display_transactions()
+                transactions.bind_entries()
+    except NameError:
+        pass
+
+    try:
+        if existing_transactions_dict is not None:
+            transactions = Transactions(usbank_window)
+            transactions.set_transactions_dict(existing_transactions_dict)
+            transactions.display_transactions()
+            transactions.bind_entries()
+    except NameError:
+        pass
+
+    try:
+        if file_path is not None or existing_transactions_dict is not None:
+            # Start mainloop
+            usbank_window.start_window()
+
+            sqlite = SQLiteConnector('C:/Users/hsand/projects/finance_calculator/database/bank_transactions.db')
+            def sql_upload(transactions):
+                sqlite.create_table('transactions')
+                sqlite.insert_transactions(transactions.transactions)
+                sqlite.submit_changes()
+            sql_upload(transactions)
         else:
-            for pages in reader.pages[:]: 
-                page += pages.extract_text()
+            usbank_window.destroy()
+    except NameError:
+        pass
 
+###
 
-        transactions_dict = pdf_page_reader(page)
-        transactions = Transactions(usbank_window)
-        transactions.set_transactions_dict(transactions_dict)
-        transactions.display_transactions()
-        transactions.bind_entries()
+### End of Main window
 
-    if existing_transactions_dict is not None:
-        transactions = Transactions(usbank_window)
-        transactions.set_transactions_dict(existing_transactions_dict)
-        transactions.display_transactions()
-        transactions.bind_entries()
-
-    if file_path is not None or existing_transactions_dict is not None:
-        # Start mainloop
-        usbank_window.start_window()
-
-        sqlite = SQLiteConnector('C:/Users/hsand/projects/finance_calculator/database/bank_transactions.db')
-        def sql_upload(transactions):
-            sqlite.create_table('transactions')
-            sqlite.insert_transactions(transactions.transactions)
-            sqlite.submit_changes()
-        sql_upload(transactions)
-    else:
-        usbank_window.window.destroy()
-
+###
 
 
 
 main()
+
