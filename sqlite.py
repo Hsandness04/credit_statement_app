@@ -18,7 +18,8 @@ class SQLiteConnector:
                 amount REAL,
                 description TEXT,
                 category TEXT,
-                subcategory TEXT
+                subcategory TEXT,
+                child_entry_key TEXT
             )
         '''
         self.cursor.execute(query)
@@ -38,19 +39,18 @@ class SQLiteConnector:
 
     def dict_list_tuple_conversion(self, dict: dict) -> list[tuple]:
         data = []
-        for key in dict:
-            transaction_details = dict[key]["details"]
-            #   Check if category or subcategory fields are already set. If they are, only overwrite them
-            #   if the new value is different than the existing one. If they aren't, don't overwrite existing
-            #   values with blanks.
-            if transaction_details is None or transaction_details["category"] == "" and self.category_exists(key):
-                transaction_details[key]["details"]["category"] =  self.select_category(key) # Set new field to existing field, since new field is blank.
-            if transaction_details is None or transaction_details["subcategory"] == "" and self.subcategory_exists(key):
-                transaction_details[key]["details"]["subcategory"] =  self.select_subcategory(key) # Set new field to existing field, since new field is blank.
+        transaction_detail_keys = ["posted_date", "amount", "description", "category", "subcategory", "child_entry_key"]
+        for dict_key in dict:
+            transaction_details = dict[dict_key]["details"]
+            for details_key in transaction_detail_keys:
+                try:
+                    transaction_details[details_key]
+                except:
+                    transaction_details[details_key] = None
 
-            trans_tuple = (key, transaction_details["posted_date"], transaction_details["amount"], transaction_details["description"], 
-                    transaction_details["category"], transaction_details["subcategory"])
-            data.append(trans_tuple)
+            transaction_tuple = (dict_key, transaction_details["posted_date"], transaction_details["amount"], transaction_details["description"], 
+                    transaction_details["category"], transaction_details["subcategory"], transaction_details["child_entry_key"])
+            data.append(transaction_tuple)
         
         return data
 
@@ -82,23 +82,24 @@ class SQLiteConnector:
     def insert_existing_transactions(self, dict) -> None:
 
         existing_data = self.dict_list_tuple_conversion(dict)
-        for transaction_ref, posted_date, amount, description, category, subcategory in existing_data:
+        for transaction_ref, posted_date, amount, description, category, subcategory, child_entry_key in existing_data:
             self.cursor.execute('''
                     UPDATE transactions
                         SET posted_date = ?,
                                     amount = ?,
                                     description = ?,
                                     category = ?,
-                                    subcategory = ?
+                                    subcategory = ?,
+                                    child_entry_key = ?
                     WHERE transaction_reference = ?
-                ''', (posted_date, amount, description, category, subcategory, transaction_ref))    
+                ''', (posted_date, amount, description, category, subcategory, child_entry_key, transaction_ref))    
         
 
     def insert_new_transactions(self, dict) -> None:
         new_data = self.dict_list_tuple_conversion(dict)
         self.cursor.executemany('''
-                INSERT INTO transactions (transaction_reference, posted_date, amount, description, category, subcategory)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO transactions (transaction_reference, posted_date, amount, description, category, subcategory, child_entry_key)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', new_data)
         
 
@@ -158,3 +159,4 @@ class SQLiteConnector:
 
     def close_connection(self):
         self.conn.close()
+
