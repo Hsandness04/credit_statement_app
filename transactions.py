@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 import re
+import random
 
 from window import *
 
@@ -73,7 +74,6 @@ class Transactions:
             # Initialize static columns. Ones that the user will not make edits to.
             ttk.Label(self.window_frame, text=tran).grid(column=0, row=row)
             ttk.Label(self.window_frame, text=self.transactions[tran]["details"]["posted_date"]).grid(column=1, row=row)
-            ttk.Label(self.window_frame, text=self.transactions[tran]["details"]["amount"]).grid(column=3, row=row)
 
             self.create_entry_widgets_for_transaction(tran, row)
             row += 1
@@ -94,15 +94,17 @@ class Transactions:
             # Add amount
             amount_entry = ttk.Entry(self.window_frame, width=7)
             amount_entry.grid(column=3, row=row, padx=10, pady=10)
-            amount_entry.insert(0, self.transactions[transaction]["details"]["amount"])
+            amount_entry.insert(0, round(float(self.transactions[transaction]["details"]["amount"]),2))
             self.entries[transaction]["amount"] = amount_entry
             # Add transaction category
             category_entry = ttk.Entry(self.window_frame)
             category_entry.grid(column=4, row=row, padx=10, pady=10)
+            category_entry.insert(0, self.transactions[transaction]["details"]["category"])
             self.entries[transaction]["category"] = category_entry
             # Add transaction subcategory
             subcategory_entry = ttk.Entry(self.window_frame)
             subcategory_entry.grid(column=5, row=row, padx=10, pady=10)
+            subcategory_entry.insert(0, self.transactions[transaction]["details"]["subcategory"])
             self.entries[transaction]["subcategory"] = subcategory_entry
             # Add checkbox to remove unwanted transactions
             if self.window.master == None:
@@ -122,13 +124,13 @@ class Transactions:
 
         # Add amount and allow user to edit
         try:
-            split_key = transaction + "001"
-            split_key = self.transactions[split_key]["details"]["amount"]
+            split_key = self.transactions[transaction]["child_entry_key"]
+            split_key_amount = self.transactions[split_key]["details"]["amount"]
         except KeyError:
-            split_key = self.transactions[transaction]["details"]["amount"]
+            split_key_amount = self.transactions[transaction]["details"]["amount"]
         amount_entry = ttk.Entry(window_frame, width=10)
         amount_entry.grid(column=3, row=1, padx=0, pady=0)
-        amount_entry.insert(0, split_key)
+        amount_entry.insert(0, split_key_amount)
         self.entries[transaction]["amount"] = amount_entry
 
 
@@ -191,7 +193,7 @@ class Transactions:
                 original_amount = self.transactions[original_entry_key]["details"]["amount"]
                 original_amount = re.sub(r"\$", "", original_amount)
                 original_amount = round(float(original_amount),2)
-            except TypeError:
+            except (KeyError, TypeError) as error:
                 pass
             try: # Check if split entry already exists.
                 self.transactions[split_entry_key]["details"]["amount"] = amount
@@ -203,15 +205,19 @@ class Transactions:
 
 
     def update_transaction_fields(self, **kwargs):
-        if "entry_key" in kwargs:
-            entry_key = kwargs["entry_key"]
-            for key, value in kwargs.items():
-                if value == entry_key:
-                    pass
-                elif key == "updated" or key == "deleted":
-                    self.transactions[entry_key][key] = value
-                else:
-                    self.transactions[entry_key]["details"][key] = value
+        entry_key = kwargs["entry_key"]
+        for key, value in kwargs.items():
+            if value == entry_key:
+                pass
+            elif key == "updated" or key == "deleted":
+                self.transactions[entry_key][key] = value
+            elif key == "parent_entry":
+                try:
+                    self.transactions[value]["details"]["child_entry_key"] = entry_key
+                except KeyError:
+                    self.transactions[value]["details"] = {"child_entry_key": entry_key}
+            else:
+                self.transactions[entry_key]["details"][key] = value
 
 
     # Event argument must be set to None. bind method automatically passes event object
@@ -235,15 +241,15 @@ class Transactions:
             elif split_transaction == True:
                 posted_date = self.transactions[entry]["details"]["posted_date"]
                 
-                split_entry = entry + "001"
+                split_entry = entry + "".join(map(str, random.sample(range(1,100),4)))
                 self.update_split_entry_amount(amount, entry, split_entry)
-                self.update_transaction_fields(entry_key=split_entry, category=category, subcategory=subcategory,
+                self.update_transaction_fields(parent_entry=entry, entry_key=split_entry, category=category, subcategory=subcategory,
                                                posted_date = posted_date,
                                                    description=description, 
                                                    updated=True,
                                                    deleted=False)
 
-        messagebox.showinfo("Entries have been submitted!")
+        messagebox.showinfo("", "Entries have been submitted!")
 
         # Populate new transactions within the frame that have not 
         # been reviewed by the user. Then bind the
