@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 
 
 def pdf_page_reader(page: str) -> dict:
@@ -10,15 +11,20 @@ def pdf_page_reader(page: str) -> dict:
 
 
 def get_transaction_amt(transaction, patterns) -> None:
-    # Remove dollar sign from transaction amount.
-    re.sub(r"\$", "", transaction)
-
     # 100's search
     if re.search(patterns[0], transaction):
-        return re.search(patterns[0], transaction).group()
+        amount = re.search(patterns[0], transaction).group()
     # 1000's search
     if re.search(patterns[1], transaction):
-        return re.search(patterns[1], transaction).group()
+        amount = re.search(patterns[1], transaction).group()
+
+    # Remove dollar sign from transaction amount.
+    amount = re.sub(r"\$", "", amount).strip()
+    try:
+        amount = round(float(amount),2)
+        return amount
+    except ValueError:
+        print("Could not cast some type to rounded float.")
     return None
 
 
@@ -30,7 +36,16 @@ def get_transaction_ref(transaction, patterns) -> None:
 
 def get_posted_date(transaction, patterns) -> None:
     if re.search(patterns, transaction):
-        return re.search(patterns, transaction).group()
+        date = re.search(patterns, transaction).group()
+        current_year = (datetime.now().year)
+        try:
+            current_year = str(current_year)
+        except TypeError:
+            print("Tried casting current year int type to string.")
+        if re.search(r"\s\d{2}/\d{2}", transaction):
+            return date + "/" + current_year
+        else:
+            return date
     return None
 
 
@@ -41,7 +56,7 @@ def read_us_bank_transaction(page) -> dict:
         if re.search(pattern, transaction):
 
             # Get posted date of transaction
-            posted_date_patterns = r"\s\d{2}/\d{2}"
+            posted_date_patterns = r"\s\d{2}/\d{2}" # Pattern is " DD/MM"
             posted_date = get_posted_date(transaction, posted_date_patterns)
             if posted_date is None:
                 raise ValueError("Posted date is null or blank.")
@@ -56,7 +71,7 @@ def read_us_bank_transaction(page) -> dict:
             amt_patterns = [r"\$\d+\.\d{1,4}", r"\$\d{1,3}(,\d{3})*\.\d{2}"]
             amount = get_transaction_amt(transaction, amt_patterns)
             if amount is None:
-                raise ValueError("Amount for transaction wasn't identified.")
+                pass # 7/18/25: If amount is missing, user can add it manually later.
 
             # Get transaction description
             for amt_pattern in amt_patterns:
@@ -72,7 +87,6 @@ def read_us_bank_transaction(page) -> dict:
             ref_id = ref_id.strip()
             posted_date = posted_date.strip()
             description = description.strip()
-            amount = amount.strip()
 
             # Set fields of individual transactions.
             transactions[ref_id] = {"details": 
@@ -80,6 +94,7 @@ def read_us_bank_transaction(page) -> dict:
                                     "amount": amount, 
                                      "description": description, 
                                      "category": "", 
-                                     "subcategory": ""}}
+                                     "subcategory": "",
+                                     "child_entry_key": ""}}
 
     return transactions
