@@ -1,5 +1,5 @@
 import os
-
+import re
 from pypdf import PdfReader
 from sqlite import SQLiteConnector
 
@@ -54,14 +54,18 @@ def main():
         file_path = None
         existing_transactions_dict = {}
 
-        db_path = os.path.abspath('C:/Users/hsand/projects/finance_calculator/database/bank_transactions.db')
+        db_path = os.path.abspath('../database/bank_transactions.db')
         sqlite = SQLiteConnector(db_path)
         transactions = sqlite.select_all()
         for transaction in transactions:
             transaction_key = transaction[1]
+            try:
+                amount = float(round(re.sub(r"\$","",transaction[3])),2)
+            except TypeError:
+                amount = float(round(float(transaction[3]),2))
             existing_transactions_dict[transaction_key] = {"details":
                                     {"posted_date": transaction[2],
-                                    "amount": transaction[3], 
+                                    "amount": amount, 
                                      "description": transaction[4], 
                                      "category": transaction[5], 
                                      "subcategory": transaction[6]}}
@@ -70,9 +74,9 @@ def main():
 
 
     def output_to_excel() -> None:
-        db_path = os.path.abspath('C:/Users/hsand/projects/finance_calculator/database/bank_transactions.db')
+        db_path = os.path.abspath('../database/bank_transactions.db')
         sqlite = SQLiteConnector(db_path)
-        excel_output = "C:/Users/hsand/projects/finance_calculator/bank_transactions.xlsx"
+        excel_output = "../bank_transactions.xlsx"
         sqlite.output_data_to_excel(excel_output)
         os.startfile(excel_output)
  
@@ -108,6 +112,20 @@ def main():
 ###
 
 
+###
+
+### Main window functions
+
+###
+
+
+    def sql_upload(transactions):
+        sqlite = SQLiteConnector('../database/bank_transactions.db')
+        sqlite.create_table('transactions')
+        sqlite.insert_transactions(transactions.transactions)
+        sqlite.submit_changes()
+
+
 
 
 
@@ -133,11 +151,15 @@ def main():
             else:
                 for pages in reader.pages[:]: 
                     page += pages.extract_text()
-                transactions_dict = pdf_page_reader(page)
-                transactions = Transactions(usbank_window)
-                transactions.set_transactions_dict(transactions_dict)
-                transactions.display_transactions()
-                transactions.bind_entries()
+
+            transactions_dict = pdf_page_reader(page)
+            transactions = Transactions(usbank_window)
+            transactions.set_transactions_dict(transactions_dict)
+            transactions.display_transactions()
+            transactions.bind_entries()
+
+            sql_upload(transactions)
+            usbank_window.start_window()
     except NameError:
         pass
 
@@ -147,24 +169,10 @@ def main():
             transactions.set_transactions_dict(existing_transactions_dict)
             transactions.display_transactions()
             transactions.bind_entries()
-    except NameError:
-        pass
-
-    try:
-        if file_path is not None or existing_transactions_dict is not None:
-            # Start mainloop
             usbank_window.start_window()
-
-            sqlite = SQLiteConnector('C:/Users/hsand/projects/finance_calculator/database/bank_transactions.db')
-            def sql_upload(transactions):
-                sqlite.create_table('transactions')
-                sqlite.insert_transactions(transactions.transactions)
-                sqlite.submit_changes()
-            sql_upload(transactions)
-        else:
-            usbank_window.destroy()
     except NameError:
         pass
+
 
 ###
 
