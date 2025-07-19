@@ -6,10 +6,12 @@ from sqlite import SQLiteConnector
 from pdf import *
 from window import Window
 from transactions import *
+from filter import *
 
 
 
 def main():
+
 
     def get_widget_entry(widget):
         if widget is None:
@@ -48,7 +50,7 @@ def main():
         input_window.destroy()
 
 
-    def update_existing_transactions() -> None:
+    def update_all_existing_transactions() -> None:
         global existing_transactions_dict
         global file_path
         file_path = None
@@ -56,16 +58,48 @@ def main():
 
         db_path = os.path.abspath('../database/bank_transactions.db')
         sqlite = SQLiteConnector(db_path)
+
         transactions = sqlite.select_all()
         for transaction in transactions:
             transaction_key = transaction[1]
-            try:
-                amount = float(round(re.sub(r"\$","",transaction[3])),2)
-            except TypeError:
-                amount = float(round(float(transaction[3]),2))
             existing_transactions_dict[transaction_key] = {"details":
                                     {"posted_date": transaction[2],
-                                    "amount": amount, 
+                                    "amount": transaction[3], 
+                                     "description": transaction[4], 
+                                     "category": transaction[5], 
+                                     "subcategory": transaction[6]}}
+            
+        input_window.destroy()
+
+
+    def filter_transactions() -> None:
+        global existing_transactions_dict
+        global file_path
+        global filtered_transactions_dict
+        file_path = None
+        existing_transactions_dict = None
+        filtered_transactions_dict = {}
+
+        input_toplevel_window = input_window.create_top_level_window()
+        filter_window = Filter(input_toplevel_window)
+        filter_window.create_buttons()
+        filter_window.create_entries()
+        input_window.wait_window(input_toplevel_window)
+
+        from_date = filter_window.entries["from"]
+        to_date = filter_window.entries["to"]
+        from_date = "2025-01-01"
+        to_date = "2025-07-18"
+
+        db_path = os.path.abspath('../database/bank_transactions.db')
+        sqlite = SQLiteConnector(db_path)
+
+        transactions = sqlite.select_transactions_date_filter(from_date, to_date)
+        for transaction in transactions:
+            transaction_key = transaction[1]
+            filtered_transactions_dict[transaction_key] = {"details":
+                                    {"posted_date": transaction[2],
+                                    "amount": transaction[3], 
                                      "description": transaction[4], 
                                      "category": transaction[5], 
                                      "subcategory": transaction[6]}}
@@ -87,7 +121,6 @@ def main():
 ### Start of Input window
 
 ###
-
     # Get PDF file and pages from the user.
     # Labels
     input_window = Window() # Temporary input window
@@ -99,8 +132,9 @@ def main():
     ttk.Entry(input_window_frame, width=80).grid(column=1, row=1, padx=10, pady=10)
     ttk.Entry(input_window_frame, width=5).grid(column=2, row=1, padx=10, pady=10)
     ttk.Entry(input_window_frame, width=5).grid(column=3, row=1, padx=10, pady=10)
-    ttk.Button(input_window_frame, text="Update Existing Transactions", command=update_existing_transactions).grid(column=1, row=2)
-    ttk.Button(input_window_frame, text="Output to Excel", command=output_to_excel).grid(column=2, row=2)
+    ttk.Button(input_window_frame, text="Update Existing Transactions", command=update_all_existing_transactions).grid(column=1, row=2)
+    ttk.Button(input_window_frame, text="Filter Transaction", command=filter_transactions).grid(column=2, row=2, padx=5)
+    ttk.Button(input_window_frame, text="Output to Excel", command=output_to_excel).grid(column=3, row=2, padx=5)
     ttk.Button(input_window_frame, text="Submit", command=get_file_path).grid(column=4, row=1)
 
     # Wait for user input before continuing with main window
@@ -112,20 +146,22 @@ def main():
 ###
 
 
-###
-
-### Main window functions
 
 ###
 
+### Main window functions start
 
+###
     def sql_upload(transactions):
         sqlite = SQLiteConnector('../database/bank_transactions.db')
         sqlite.create_table('transactions')
         sqlite.insert_transactions(transactions.transactions)
         sqlite.submit_changes()
+###
 
+### Main window functions end
 
+###
 
 
 
@@ -170,6 +206,18 @@ def main():
             transactions.display_transactions()
             transactions.bind_entries()
             usbank_window.start_window()
+            sql_upload(transactions)
+    except NameError:
+        pass
+
+    try:
+        if filtered_transactions_dict is not None:
+            transactions = Transactions(usbank_window)
+            transactions.set_transactions_dict(filtered_transactions_dict)
+            transactions.display_transactions()
+            transactions.bind_entries()
+            usbank_window.start_window()
+            sql_upload(transactions)
     except NameError:
         pass
 
