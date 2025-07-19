@@ -34,6 +34,7 @@ def get_transaction_ref(transaction, patterns) -> None:
     return None
 
 
+# Sqlite stores dates as yyyy-mm-dd which is ISO 8601 standard format.
 def get_posted_date(transaction, patterns) -> None:
     if re.search(patterns, transaction):
         date = re.search(patterns, transaction).group()
@@ -43,9 +44,11 @@ def get_posted_date(transaction, patterns) -> None:
         except TypeError:
             print("Tried casting current year int type to string.")
         if re.search(r"\s\d{2}/\d{2}", transaction):
-            return date + "/" + current_year
-        else:
+            date = re.sub(r"\/", "", date).strip()
+            date = current_year + "-" + date[:2] + "-" + date[2:]
             return date
+        else:
+            return None
     return None
 
 
