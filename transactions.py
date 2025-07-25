@@ -130,7 +130,7 @@ class Transactions:
             split_key_amount = self.transactions[transaction]["details"]["amount"]
         amount_entry = ttk.Entry(window_frame, width=10)
         amount_entry.grid(column=3, row=1, padx=0, pady=0)
-        amount_entry.insert(0, split_key_amount)
+        amount_entry.insert(0, 0)
         self.entries[transaction]["amount"] = amount_entry
 
 
@@ -138,6 +138,8 @@ class Transactions:
     # need a few random digits on the end of it to ensure it's a unique value. Other fields should be entry widgets
     # for user to break down transaction into different categories.
     def display_split_transaction(self, transaction):
+        # Capture any updates made to transactions before the split window opens.
+        self.submit_entries(display_message=False, update_entry_fields=False)
         split_window = self.window.create_top_level_window()
         split_transaction = Transactions(window=split_window, parent_instance=self)
 
@@ -194,7 +196,7 @@ class Transactions:
                 original_amount = re.sub(r"\$", "", original_amount)
                 original_amount = round(float(original_amount),2)
             except (KeyError, TypeError) as error:
-                pass
+                f"Error {error} occured"
             try: # Check if split entry already exists.
                 self.transactions[split_entry_key]["details"]["amount"] = amount
             except KeyError:
@@ -210,7 +212,7 @@ class Transactions:
             if value == entry_key:
                 pass
             elif key == "updated" or key == "deleted":
-                self.transactions[entry_key][key] = value
+                self.transactions[entry_key][key] = value # Ex. Transaction [4084]['updated'] = TRUE
             elif key == "parent_entry":
                 try:
                     self.transactions[value]["details"]["child_entry_key"] = entry_key
@@ -222,7 +224,7 @@ class Transactions:
 
     # Event argument must be set to None. bind method automatically passes event object
     # while method as a callback in the Button object does not pass any argument.
-    def submit_entries(self, redraw_transactions=True, split_transaction=False, event=None):
+    def submit_entries(self, redraw_transactions=True, split_transaction=False, display_message=True, update_entry_fields=True, event=None):
 
         for entry in self.entries:
             category = self.entries[entry]["category"].get().strip()
@@ -234,10 +236,13 @@ class Transactions:
                 # Delete entries on submit if users select the delete checkbox.
                 if self.entries[entry]["checkbox"]["checked"].get() == 1:
                     self.delete_entry(entry)
+                updated = True
+                if update_entry_fields == False:
+                    updated = False
                 self.update_transaction_fields(entry_key=entry, category=category, subcategory=subcategory,
                                                description=description, 
                                                amount=amount,
-                                               updated=True)
+                                               updated=updated)
             elif split_transaction == True:
                 posted_date = self.transactions[entry]["details"]["posted_date"]
                 
@@ -248,8 +253,8 @@ class Transactions:
                                                    description=description, 
                                                    updated=True,
                                                    deleted=False)
-
-        messagebox.showinfo("", "Entries have been submitted!")
+        if display_message:
+            messagebox.showinfo("", "Entries have been submitted!")
 
         # Populate new transactions within the frame that have not 
         # been reviewed by the user. Then bind the
