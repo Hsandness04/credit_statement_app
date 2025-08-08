@@ -30,7 +30,7 @@ def main():
         global existing_transactions_dict
         existing_transactions_dict = None
 
-        widgets = input_window_frame.winfo_children()
+        widgets = input_statement_tab.frm.winfo_children()
         for widget in widgets:
             if widget.widgetName == "ttk::entry":
                 widget_value = get_widget_entry(widget)
@@ -121,21 +121,28 @@ def main():
 ### Start of Input window
 
 ###
-    # Get PDF file and pages from the user.
-    # Labels
-    input_window = Window() # Temporary input window
-    input_window_frame = input_window.create_frame()
-    ttk.Label(input_window_frame, text="File Path").grid(column=1, row=0)
-    ttk.Label(input_window_frame, text="Start Page").grid(column=2, row=0)
-    ttk.Label(input_window_frame, text="End Page").grid(column=3, row=0)
+    # Temporary input window
+    input_window = Window()
+    input_notebook = input_window.create_notebook()
+
+    input_statement_tab = input_window.create_frame()
+    input_transaction_tab = input_window.create_frame()
+    input_notebook.add(input_statement_tab, text ='Load Credit Statements')
+    input_notebook.add(input_transaction_tab, text ='Insert Transactions')
+    input_notebook.pack(expand = 1, fill ="both")
+
+
+    ttk.Label(input_statement_tab, text="File Path").grid(column=1, row=0)
+    ttk.Label(input_statement_tab, text="Start Page").grid(column=2, row=0)
+    ttk.Label(input_statement_tab, text="End Page").grid(column=3, row=0)
     # Entries and submit button
-    ttk.Entry(input_window_frame, width=80).grid(column=1, row=1, padx=10, pady=10)
-    ttk.Entry(input_window_frame, width=5).grid(column=2, row=1, padx=10, pady=10)
-    ttk.Entry(input_window_frame, width=5).grid(column=3, row=1, padx=10, pady=10)
-    ttk.Button(input_window_frame, text="Update Existing Transactions", command=update_all_existing_transactions).grid(column=1, row=2)
-    ttk.Button(input_window_frame, text="Filter Transaction", command=filter_transactions).grid(column=2, row=2, padx=5)
-    ttk.Button(input_window_frame, text="Output to Excel", command=output_to_excel).grid(column=3, row=2, padx=5)
-    ttk.Button(input_window_frame, text="Submit", command=get_file_path).grid(column=4, row=1)
+    ttk.Entry(input_statement_tab, width=80).grid(column=1, row=1, padx=10, pady=10)
+    ttk.Entry(input_statement_tab, width=5).grid(column=2, row=1, padx=10, pady=10)
+    ttk.Entry(input_statement_tab, width=5).grid(column=3, row=1, padx=10, pady=10)
+    ttk.Button(input_statement_tab, text="Update Existing Transactions", command=update_all_existing_transactions).grid(column=1, row=2)
+    ttk.Button(input_statement_tab, text="Filter Transaction", command=filter_transactions).grid(column=2, row=2, padx=5)
+    ttk.Button(input_statement_tab, text="Output to Excel", command=output_to_excel).grid(column=3, row=2, padx=5)
+    ttk.Button(input_statement_tab, text="Submit", command=get_file_path).grid(column=4, row=1)
 
     # Wait for user input before continuing with main window
     input_window.start_window()
@@ -231,4 +238,5 @@ def main():
 
 
 main()
+
 
